@@ -4,179 +4,191 @@
 
 Build an autonomous mobile robot capable of monitoring a plant's environment, navigating an indoor space, identifying suitable locations for the plant, and learning from the plant's response over time.
 
-The system will combine embedded systems, robotics, computer vision, and machine learning to create a closed-loop plant care system.
+The system will combine embedded systems, robotics, computer vision, and machine learning to create a closed loop plant care system.
+
+The core goal is to build an autonomous embodied system that can learn and act on the individual environmental needs of a plant.
 
 ## System Architecture
 
+The system is divided between a Raspberry Pi and a microcontroller. The Raspberry Pi handles computation and decision making, while the microcontroller handles hardware control and sensor acquisition.
+
 <img width="1012" height="662" alt="image" src="https://github.com/user-attachments/assets/709dca27-90a2-4e89-9a93-3c0cf71d3afa" />
+
+### Raspberry Pi
+
+- Main computation
+- Computer vision
+- Navigation and mapping
+- Data collection and logging
+- Plant modeling
+- Decision making
+
+### Microcontroller
+
+- Motor control
+- Wheel encoder reading
+- Sensor acquisition
+- Low level and real time control
+
+The initial microcontroller platform is an **Arduino UNO R4 WiFi**.
+
+### Raspberry Pi and Microcontroller Communication
+
+The initial communication method will be USB serial/UART using a simple command/response interface.
+
+The communication layer should remain modular so the underlying transport can be changed later if needed.
 
 ## Major Components
 
-### Embedded System 
+### Embedded System
 
-Raspberry Pi
-- Computation
+#### Raspberry Pi
+
 - Computer vision
-- Navigation
-- Data collection
-- Plant Modeling
+- Navigation and mapping
+- Plant modeling
 - Decision making
+- Data collection
+- Communication with the microcontroller
 
-Microcontroller
+#### Microcontroller
+
 - Motor control
 - Encoder reading
-- Sensor aquisition
-- Real time control
-
-Communication
-- Raspberry Pi <-> Microcontroller
-- Initially UART (Universal Asynchronous Receiver/Transmitter)/serial (potentially another protocol later)
+- Environmental sensor acquisition
+- Low level control
+- Communication with the Raspberry Pi
 
 ### Sensors
 
-Environmental
-- Light sensor
-- Temperature sensor
-- Humidity sensor
-- Soil moisture
+#### Environmental
 
-Robot
-- Wheel encoders
-- IMU
-- Camera
-- LiDAR/depth sensor
-
-## Robotics Functionality
-
-1. Drive forward/backward
-2. Turn
-3. Measure its movement
-4. Detect obstacles
-5. Determine its position
-6. Navigate to a target location
-
-Evnetually:
-Map -> Current Position -> Target Location -> Path Planning -> Obstacle Avoidance -> Motor Commands
-
-## Computer Vision Functionality
-
-### Environement
-
-1. Assist environmental perception
-3. Potentially assist localization/mapping
-
-### Plant
-
-1. Detect the plant
-2. Estimate plant size
-3. Monitor growth
-4. Detect visible stress/health indicators
-5. Track changes over time
-
-## Plant Environmental Model
-
-Plant requirements -> Environmental measures -> Suitability score -> Plant response -> Update model
-
-## Learning/Feedback Loop
-
-Choose location -> Move plant/robot -> Monitor plant & environment -> Evaluate plant response -> Update model -> Choose next location
-
-## Development Plan
-
-### Phase 0 - Simulation & Software Foundation
-
-Goal: Start developing before buying expensive hardware (I need time + more money, sorry)
-- Define sensor data format
-- Define robot command interface
-- Create plant/environment data model
-- Create basic plant model
-- Build data logging system
-- Create simulated environment
-- Simulate robot position/movement
-- Implement basic suitability scoring
-- Start experimenting with how plant responses will be represented
-
-### Phase 1 - Mobile Platform
-
-!!! Note: This phase will be expensive due to hardware costs, so it may take some time after Phase 0 to begin Phase 1 (I need time + money to get the hardware required) !!!
-
-Goal: Robot can reliably move
-- Build chassis
-- Motors
-- Motor driver
-- Battery
-- Microcontroller
-- Raspberry Pi
-- Pi <-> Microcontroller communication
-
-Needs to be purchased:
-- Chassis/platform
-- 2 wheels
-- Caster wheel
-- 2 × DC gear motors with wheel encoders
-- Motor driver
-- Microcontroller
-- Battery (for motors)
-- 5V voltage regulator / power supply for Raspberry Pi
-- Jumper wires
-- Motor wires/connectors
-- Breadboard
-- Screws/nuts/standoffs
-- Basic brackets or mounts for the Pi, MCU, and motor driver
-- USB cable
-
-### Phase 2 - Environmental Sensing
-
-Goal: Robot can measure its environment
 - Light
 - Temperature
 - Humidity
 - Soil moisture
-- Data logging
 
-### Phase 3 - Navigation
+#### Robot
 
-Goal: Robot can autonomously move through its environment
-- Encoders
+- Wheel encoders
 - IMU
-- Obstacle detection
-- Localization
-- Mapping
-- Path planning
-
-### Phase 4 - Plant Monitoring
-
-Goal: Robot can observe the plant
 - Camera
-- Plant detection
-- Growth tracking
-- Visual health indicators
-- Environmental correlation
+- Ultrasonic obstacle sensor
 
-### Phase 5 - Intelligent Placement
+The exact sensor configuration will be determined through prototyping rather than assuming every sensor is required.
 
-Goal: Robot determines where plant should go
-- Plant requirements
-- Environmental map
-- Plant observations
-- Location prediction
-- Robot navigation
-- Plant placement
+## Robotics Functionality
 
-### Phase 6 - Learning
+The robot should progressively support:
 
-Goal: Robot learns the preferences of the individual plant
-- Observe
-- Select location/action
-- Move
-- Measure environmental conditions
-- Observe plant response
-- Update plant model
-- Select next action
+1. Drive forward and backward
+2. Turn
+3. Measure its movement
+4. Detect obstacles
+5. Estimate its position
+6. Navigate to a target location
+7. Transport the plant to a selected location
 
-### Phase 7 - Potential Enhancements
+The eventual navigation pipeline is:
 
-Goal: Robot is enhanced with whatever the developers see fit
-- Plant avatar
-- Plant watering system
-- To be continued...
+**Map -> Current Position -> Target Location -> Path Planning -> Obstacle Avoidance -> Motor Commands**
+
+The system should begin with simple movement and obstacle avoidance before adding advanced localization, mapping, and path planning.
+
+### Robot Model
+
+The robot will use a differential drive model:
+
+- Left motor controls the left wheel
+- Right motor controls the right wheel
+- Wheel encoders provide movement measurements
+- Motor commands are converted into wheel velocities
+
+This model will support later odometry and autonomous navigation.
+
+## Computer Vision
+
+Computer vision will be used for environmental perception and plant monitoring.
+
+### Environment
+
+Potential uses include:
+
+- Detecting obstacles
+- Identifying navigable areas
+- Assisting localization
+- Assisting mapping
+- Identifying relevant environmental features
+
+### Plant
+
+Potential capabilities include:
+
+1. Detect the plant
+2. Estimate plant size
+3. Track growth over time
+4. Detect visible stress or health indicators
+5. Track visual changes over time
+6. Relate visual observations to environmental conditions
+
+Computer vision will be introduced incrementally, beginning with basic detection before more advanced analysis.
+
+## Plant Environmental Model
+
+The robot will maintain a model of the relationship between environmental conditions and plant response.
+
+Initial model:
+
+**Plant Requirements -> Environmental Measurements -> Suitability Score**
+
+As observations accumulate:
+
+**Plant Requirements + Environmental Measurements + Plant Response -> Updated Suitability Model**
+
+The goal is eventually to learn the preferences of the individual plant rather than relying only on generic plant requirements.
+
+Relevant data may include:
+
+- Light exposure
+- Temperature
+- Humidity
+- Soil moisture
+- Location
+- Time
+- Plant growth
+- Visible plant health indicators
+
+## Learning and Feedback Loop
+
+The system will use a closed loop process:
+
+**Choose Location -> Move Plant/Robot -> Monitor Environment and Plant -> Evaluate Plant Response -> Update Model -> Choose Next Action**
+
+Development should begin with a simple suitability model and improve as real observations are collected.
+
+Potential approaches include:
+
+- Rule based suitability scoring
+- Statistical models
+- Supervised machine learning
+- Reinforcement learning
+
+The specific machine learning approach will be selected after data collection and a baseline model are working. Machine learning is not required for the initial robot prototype.
+
+## Hardware
+
+The initial prototype will use the hardware already available to the team wherever practical.
+
+## Future Capabilities
+
+Possible extensions include:
+
+- Individualized plant preference learning
+- More advanced computer vision
+- Autonomous mapping and navigation
+- Improved plant health estimation
+- Predictive watering
+- Automated watering during vacations
+- Virtual plant avatar reflecting plant/soil health
+- Multiple-plant support
+- More advanced experimentation and learning strategies
