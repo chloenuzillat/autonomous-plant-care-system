@@ -51,6 +51,8 @@ The communication layer should remain modular so the underlying transport can be
 - Data collection
 - Communication with the microcontroller
 
+The Raspberry Pi software will be developed primarily in **Python**.
+
 #### Microcontroller
 
 - Motor control
@@ -190,5 +192,5 @@ Possible extensions include:
 - Predictive watering
 - Automated watering during vacations
 - Virtual plant avatar reflecting plant/soil health
-- Multiple-plant support
+- Multiple plant support
 - More advanced experimentation and learning strategies
