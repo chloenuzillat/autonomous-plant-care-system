@@ -15,4 +15,4 @@ When working on an issue:
 
 Please ask questions or discuss the issue if you are unsure how to approach it. It's okay to ask for help!
 
-## Look at `docs/technicalPlan.md` for more detail
+## Look at `docs/technicalPlan.md` for more details on the project
