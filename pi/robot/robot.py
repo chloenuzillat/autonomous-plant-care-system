@@ -1,4 +1,7 @@
 class Robot:
+    """
+    High-level interface for controlling a robot. This class provides methods to move the robot, stop it, and retrieve its position and orientation.
+    """
 
     def move(self, left_speed, right_speed):
         """
