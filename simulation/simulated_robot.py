@@ -17,3 +17,11 @@ class SimulatedRobot(Robot):
         :return: A tuple (x, y) representing the robot's position
         """
         return (self.x, self.y)
+
+    def get_orientation(self):
+        """
+        Get the current orientation of the simulated robot.
+
+        :return: The orientation angle in degrees
+        """
+        return self.orientation
