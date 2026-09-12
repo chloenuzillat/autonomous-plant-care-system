@@ -9,3 +9,11 @@ class SimulatedRobot(Robot):
         self.x = 0
         self.y = 0
         self.orientation = 0 # in degrees, 0 is facing right, 90 is facing up
+
+    def get_position(self):
+        """
+        Get the current position of the simulated robot.
+
+        :return: A tuple (x, y) representing the robot's position
+        """
+        return (self.x, self.y)
