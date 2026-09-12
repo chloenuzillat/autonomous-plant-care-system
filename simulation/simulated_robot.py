@@ -1,4 +1,5 @@
 from pi.robot import Robot
+import math
 
 class SimulatedRobot(Robot):
     """
@@ -9,6 +10,22 @@ class SimulatedRobot(Robot):
         self.x = 0
         self.y = 0
         self.orientation = 0 # in degrees, 0 is facing right, 90 is facing up
+
+    def move(self, left_speed, right_speed):
+        """
+        Move the simulated robot based on the speeds of the left and right motors.
+
+        For equal wheel speeds, the robot moves forward or backward in its current orientation.
+
+        :param left_speed: Speed of the left motor.
+        :param right_speed: Speed of the right motor.
+        """
+        if left_speed == right_speed:
+            distance = left_speed * 0.1
+            angle = math.radians(self.orientation)
+
+            self.x += distance * math.cos(angle)
+            self.y += distance * math.sin(angle)
 
     def get_position(self):
         """
