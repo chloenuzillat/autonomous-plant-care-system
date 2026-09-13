@@ -2,16 +2,26 @@ from simulation.simulated_robot import SimulatedRobot
 from simulation.environment import Environment
 
 import pygame
+import math
 
 def draw_robot(screen, robot):
     """
-    Draw the robot on the given Pygame screen.
+    Draw the robot and the direction indicator on the given Pygame screen.
     """
     x, y = robot.get_position()
+    orientation = robot.get_orientation()
 
     robot_size = 20
+    direction_length = 30
 
-    pygame.draw.circle(screen, (0, 0, 255), (int(x), int(y)), robot_size)
+    pygame.draw.circle(screen, (118, 173, 100), (int(x), int(y)), robot_size)
+
+    angle = math.radians(orientation)
+
+    end_x = x + direction_length * math.cos(angle)
+    end_y = y - direction_length * math.sin(angle)
+
+    pygame.draw.line(screen, (118, 173, 100), (int(x), int(y)), (int(end_x), int(end_y)), 4)
 
 def main():
     """
