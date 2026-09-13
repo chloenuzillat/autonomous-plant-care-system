@@ -12,7 +12,7 @@ class SimulatedRobot(Robot):
         self.y = 300
         self.orientation = 0 # in degrees, 0 is facing right, 90 is facing up
 
-    def move(self, left_speed, right_speed):
+    def move(self, left_speed, right_speed, environment):
         """
         Move the simulated robot based on the speeds of the left and right motors.
 
@@ -26,8 +26,12 @@ class SimulatedRobot(Robot):
             distance = left_speed * 0.1
             angle = math.radians(self.orientation)
 
-            self.x += distance * math.cos(angle)
-            self.y += distance * math.sin(angle)
+            new_x = self.x + distance * math.cos(angle)
+            new_y = self.y - distance * math.sin(angle)
+
+            if self.is_within_bounds(new_x, new_y, environment) and not self.check_obstacle_collision(new_x, new_y, environment):
+                self.x = new_x
+                self.y = new_y
         else:
             turn_rate = (right_speed - left_speed) * 0.1
             self.orientation = (self.orientation + turn_rate) % 360
@@ -36,8 +40,12 @@ class SimulatedRobot(Robot):
             distance = average_speed * 0.1
             angle = math.radians(self.orientation)
 
-            self.x += distance * math.cos(angle)
-            self.y += distance * math.sin(angle)
+            new_x = self.x + distance * math.cos(angle)
+            new_y = self.y - distance * math.sin(angle)
+
+            if self.is_within_bounds(new_x, new_y, environment) and not self.check_obstacle_collision(new_x, new_y, environment):
+                self.x = new_x
+                self.y = new_y
 
     def get_position(self):
         """
@@ -54,3 +62,28 @@ class SimulatedRobot(Robot):
         :return: The orientation angle in degrees
         """
         return self.orientation
+    
+    def is_within_bounds(self, x, y, environment):
+        """
+        Check if the robot is within the bounds of the environment.
+        """
+        radius = 20
+        return (radius <= x <= environment.width - radius and radius <= y <= environment.height - radius)
+
+    def check_obstacle_collision(self, x, y, environment):
+        """
+        Check if the robot collides with any obstacles in the environment.
+        """
+        radius = 20
+
+        for obstacle in environment.get_obstacles():
+            closest_x = max(obstacle.x, min(x, obstacle.x + obstacle.width))
+            closest_y = max(obstacle.y, min(y, obstacle.y + obstacle.height))
+
+            distance_x = x - closest_x
+            distance_y = y - closest_y
+            distance_squared = distance_x ** 2 + distance_y ** 2
+
+            if distance_squared < radius ** 2:
+                return True
+        return False

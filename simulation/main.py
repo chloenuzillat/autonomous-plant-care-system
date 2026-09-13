@@ -53,10 +53,33 @@ def main():
 
     running = True
 
+    MOVEMENT_SPEED = 50
+    TURN_SPEED = 50
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+
+        keys = pygame.key.get_pressed()
+
+        left_wheel_speed = 0
+        right_wheel_speed = 0
+
+        if keys[pygame.K_w]:
+            left_wheel_speed = MOVEMENT_SPEED
+            right_wheel_speed = MOVEMENT_SPEED
+        elif keys[pygame.K_s]:
+            left_wheel_speed = -MOVEMENT_SPEED
+            right_wheel_speed = -MOVEMENT_SPEED
+        elif keys[pygame.K_a]:
+            left_wheel_speed = -TURN_SPEED
+            right_wheel_speed = TURN_SPEED
+        elif keys[pygame.K_d]:
+            left_wheel_speed = TURN_SPEED
+            right_wheel_speed = -TURN_SPEED
+
+        robot.move(left_wheel_speed, right_wheel_speed, environment)
 
         screen.fill((255, 255, 255))
 
