@@ -30,8 +30,8 @@ def main():
     running = True
 
     while running:
-        for even in pygame.event.get():
-            if even.type == pygame.QUIT:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 running = False
 
         screen.fill((255, 255, 255))

@@ -8,8 +8,8 @@ class SimulatedRobot(Robot):
     """
 
     def __init__(self):
-        self.x = 50
-        self.y = 50
+        self.x = 400
+        self.y = 300
         self.orientation = 0 # in degrees, 0 is facing right, 90 is facing up
 
     def move(self, left_speed, right_speed):
