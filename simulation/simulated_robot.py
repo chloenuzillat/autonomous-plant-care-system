@@ -7,12 +7,15 @@ class SimulatedRobot(Robot):
     A simulated robot that can move in a 2D plane.
     """
 
-    def __init__(self):
-        self.x = 400
-        self.y = 300
+    def __init__(self, environment):
+        self.environment = environment
+        self.x = environment.width / 2
+        self.y = environment.height / 2
         self.orientation = 0 # in degrees, 0 is facing right, 90 is facing up
+        self.left_encoder = 0
+        self.right_encoder = 0
 
-    def move(self, left_speed, right_speed, environment):
+    def move(self, left_speed, right_speed):
         """
         Move the simulated robot based on the speeds of the left and right motors.
 
@@ -22,6 +25,7 @@ class SimulatedRobot(Robot):
         :param left_speed: Speed of the left motor.
         :param right_speed: Speed of the right motor.
         """
+
         if left_speed == right_speed:
             distance = left_speed * 0.1
             angle = math.radians(self.orientation)
@@ -29,9 +33,12 @@ class SimulatedRobot(Robot):
             new_x = self.x + distance * math.cos(angle)
             new_y = self.y - distance * math.sin(angle)
 
-            if self.is_within_bounds(new_x, new_y, environment) and not self.check_obstacle_collision(new_x, new_y, environment):
+            if self.is_within_bounds(new_x, new_y) and not self.check_obstacle_collision(new_x, new_y):
                 self.x = new_x
                 self.y = new_y
+
+                self.left_encoder += left_speed * 0.1
+                self.right_encoder += right_speed * 0.1
         else:
             turn_rate = (right_speed - left_speed) * 0.1
             self.orientation = (self.orientation + turn_rate) % 360
@@ -43,7 +50,7 @@ class SimulatedRobot(Robot):
             new_x = self.x + distance * math.cos(angle)
             new_y = self.y - distance * math.sin(angle)
 
-            if self.is_within_bounds(new_x, new_y, environment) and not self.check_obstacle_collision(new_x, new_y, environment):
+            if self.is_within_bounds(new_x, new_y) and not self.check_obstacle_collision(new_x, new_y):
                 self.x = new_x
                 self.y = new_y
 
@@ -63,20 +70,20 @@ class SimulatedRobot(Robot):
         """
         return self.orientation
     
-    def is_within_bounds(self, x, y, environment):
+    def is_within_bounds(self, x, y):
         """
         Check if the robot is within the bounds of the environment.
         """
         radius = 20
-        return (radius <= x <= environment.width - radius and radius <= y <= environment.height - radius)
+        return (radius <= x <= self.environment.width - radius and radius <= y <= self.environment.height - radius)
 
-    def check_obstacle_collision(self, x, y, environment):
+    def check_obstacle_collision(self, x, y):
         """
         Check if the robot collides with any obstacles in the environment.
         """
         radius = 20
 
-        for obstacle in environment.get_obstacles():
+        for obstacle in self.environment.get_obstacles():
             closest_x = max(obstacle.x, min(x, obstacle.x + obstacle.width))
             closest_y = max(obstacle.y, min(y, obstacle.y + obstacle.height))
 
@@ -87,3 +94,11 @@ class SimulatedRobot(Robot):
             if distance_squared < radius ** 2:
                 return True
         return False
+
+    def get_encoder_data(self):
+        """
+        Get the encoder data for the left and right wheels.
+
+        :return: A dictionary with the encoder values
+        """
+        return {"left_encoder": self.left_encoder, "right_encoder": self.right_encoder}

@@ -42,7 +42,7 @@ def main():
     environment.add_obstacle(obstacle1)
     environment.add_obstacle(obstacle2)
 
-    robot = SimulatedRobot()
+    robot = SimulatedRobot(environment)
 
     pygame.init()
 
@@ -79,7 +79,16 @@ def main():
             left_wheel_speed = TURN_SPEED
             right_wheel_speed = -TURN_SPEED
 
-        robot.move(left_wheel_speed, right_wheel_speed, environment)
+        robot.move(left_wheel_speed, right_wheel_speed)
+
+        encoder_data = robot.get_encoder_data()
+
+        print(
+            f"\rLeft encoder: {encoder_data['left_encoder']:.2f} | "
+            f"Right encoder: {encoder_data['right_encoder']:.2f}",
+            end="",
+            flush=True
+        )
 
         screen.fill((255, 255, 255))
 
