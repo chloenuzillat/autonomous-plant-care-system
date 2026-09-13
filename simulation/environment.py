@@ -12,3 +12,20 @@ class Environment:
         """
         self.width = width
         self.height = height
+        self.obstacles = []  # List to hold obstacles in the environment
+
+    def add_obstacle(self, obstacle):
+        """
+        Add an obstacle to the environment.
+
+        :param obstacle: An instance of the Obstacle class
+        """
+        self.obstacles.append(obstacle)
+
+    def get_obstacles(self):
+        """
+        Get the list of obstacles in the environment.
+
+        :return: List of obstacles
+        """
+        return self.obstacles
