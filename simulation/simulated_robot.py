@@ -1,4 +1,5 @@
-from pi.robot import Robot
+from pi.robot.robot import Robot
+
 import math
 
 class SimulatedRobot(Robot):
@@ -7,8 +8,8 @@ class SimulatedRobot(Robot):
     """
 
     def __init__(self):
-        self.x = 0
-        self.y = 0
+        self.x = 50
+        self.y = 50
         self.orientation = 0 # in degrees, 0 is facing right, 90 is facing up
 
     def move(self, left_speed, right_speed):
