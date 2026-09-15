@@ -3,3 +3,5 @@ simulation/__pycache__/environment.cpython-313.pyc
 simulation/__pycache__/main.cpython-313.pyc
 simulation/__pycache__/simulated_robot.cpython-313.pyc
 simulation/__pycache__/obstacle.cpython-313.pyc
+__pycache__
+*.db
