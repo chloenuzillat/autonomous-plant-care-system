@@ -1,0 +1,11 @@
+plant_id,plant_name,lux_min,lux_max,temp_min_celsius,temp_max_celsius,humidity_min_pct,humidity_max_pct,source,last_updated
+1,Snake Plant,500,10000,15,29,30,50,perenual,2026-09-01 09:00:00
+2,Golden Pothos,1000,10000,18,29,40,60,perenual,2026-09-01 09:00:00
+3,Fiddle Leaf Fig,3000,15000,18,27,40,60,trefle,2026-09-01 09:00:00
+4,Peace Lily,800,8000,18,27,50,70,perenual,2026-09-02 14:30:00
+5,Aloe Vera,5000,30000,13,29,20,40,trefle,2026-09-02 14:30:00
+6,Monstera Deliciosa,1500,12000,18,29,50,70,perenual,2026-09-02 14:30:00
+7,Sweet Basil,10000,40000,18,30,40,60,manual,2026-09-05 08:15:00
+8,Boston Fern,500,5000,16,24,60,80,perenual,2026-09-05 08:15:00
+9,ZZ Plant,500,8000,15,29,30,50,manual,2026-09-05 08:15:00
+10,Spider Plant,1000,10000,15,27,40,60,trefle,2026-09-10 11:45:00
