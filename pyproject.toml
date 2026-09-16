@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autonomous-plant-care-system"
+version = "0.1.0"
+description = "A wheeled robot that maps a space and finds the best location for a plant."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "pygame-ce>=2.5",
+]
+
+[tool.setuptools]
+# Explicit list rather than auto-discovery: the repo root also holds data/ and
+# docs/, which are not importable packages.
+packages = [
+    "pi",
+    "pi.robot",
+    "read_arduino",
+    "read_arduino.data",
+    "read_arduino.data.environmental_sensors",
+    "simulation",
+]

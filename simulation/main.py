@@ -1,7 +1,7 @@
-from simulation.obstacle import Obstacle
+from simulation.config import ROBOT_RADIUS
 from simulation.simulated_robot import SimulatedRobot
 from simulation.environment import Environment
-
+from simulation.obstacle import Obstacle
 import pygame
 import math
 
@@ -12,7 +12,7 @@ def draw_robot(screen, robot):
     x, y = robot.get_position()
     orientation = robot.get_orientation()
 
-    robot_size = 20
+    robot_size = ROBOT_RADIUS
     direction_length = 30
 
     pygame.draw.circle(screen, (118, 173, 100), (int(x), int(y)), robot_size)

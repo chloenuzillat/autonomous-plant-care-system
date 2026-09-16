@@ -1,4 +1,5 @@
 from pi.robot.robot import Robot
+from simulation.config import ROBOT_RADIUS
 
 import math
 
@@ -74,14 +75,14 @@ class SimulatedRobot(Robot):
         """
         Check if the robot is within the bounds of the environment.
         """
-        radius = 20
+        radius = ROBOT_RADIUS
         return (radius <= x <= self.environment.width - radius and radius <= y <= self.environment.height - radius)
 
     def check_obstacle_collision(self, x, y):
         """
         Check if the robot collides with any obstacles in the environment.
         """
-        radius = 20
+        radius = ROBOT_RADIUS
 
         for obstacle in self.environment.get_obstacles():
             closest_x = max(obstacle.x, min(x, obstacle.x + obstacle.width))
