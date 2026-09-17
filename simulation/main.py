@@ -80,6 +80,49 @@ def load_mock_database(db_path=MOCK_DB_PATH):
             add_user_plant_log(db_path, reading)
 
 
+def format_reading(value, unit, decimals=1):
+    """
+    Format one sensor reading for the status line.
+
+    Every reading column is nullable, so a plant that was never measured for
+    something has to render as a placeholder rather than blowing up on format.
+
+    :param value: The reading, or None if it was never taken
+    :param unit: Unit to append
+    :param decimals: Decimal places to show
+    :return: The formatted reading
+    """
+    if value is None:
+        return f"--{unit}"
+
+    return f"{value:.{decimals}f}{unit}"
+
+
+def format_status(encoder_data, diagnostics):
+    """
+    Build the one-line status written under the simulation window.
+
+    Kept to a single short line on purpose: it is rewritten in place with a
+    carriage return, which only returns to the start of the current row, so
+    anything long enough to wrap would leave pieces of itself behind.
+
+    :param encoder_data: Encoder values from the robot
+    :param diagnostics: Latest reading for the touched plant, or {} for none
+    :return: The status line
+    """
+    status = (f"L: {encoder_data['left_encoder']:.2f} | "
+              f"R: {encoder_data['right_encoder']:.2f}")
+
+    if not diagnostics:
+        return status
+
+    return (f"{status} | plant {diagnostics['user_plant_id']}: "
+            f"{format_reading(diagnostics['lux_reading'], ' lux', 0)}, "
+            f"{format_reading(diagnostics['temp_reading'], 'C')}, "
+            f"{format_reading(diagnostics['humidity_reading'], '% RH', 0)}, "
+            f"soil {format_reading(diagnostics['soil_moisture_pct'], '%', 0)}")
+
+
 def draw_robot(screen, robot):
     """
     Draw the robot and the direction indicator on the given Pygame screen.
@@ -149,6 +192,11 @@ def main():
     MOVEMENT_SPEED = 50
     TURN_SPEED = 50
 
+    # Widest status written so far. Every later one is padded out to it, because
+    # a carriage return only moves the cursor -- it does not erase what a longer
+    # line left on the row.
+    status_width = 0
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -174,14 +222,10 @@ def main():
 
         robot.move(left_wheel_speed, right_wheel_speed)
 
-        encoder_data = robot.get_encoder_data()
+        status = format_status(robot.get_encoder_data(), robot.get_diagnostics())
+        status_width = max(status_width, len(status))
 
-        print(
-            f"\rLeft encoder: {encoder_data['left_encoder']:.2f} | "
-            f"Right encoder: {encoder_data['right_encoder']:.2f}",
-            end="",
-            flush=True
-        )
+        print("\r" + status.ljust(status_width), end="", flush=True)
 
         screen.fill((255, 255, 255))
 
@@ -195,6 +239,10 @@ def main():
         pygame.display.flip()
 
         clock.tick(60)
+
+    # The status line was never terminated, so close it off rather than leaving
+    # the shell prompt to land on top of it.
+    print()
 
     pygame.quit()
 

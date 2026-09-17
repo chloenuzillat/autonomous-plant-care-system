@@ -29,6 +29,7 @@ GRID_HEIGHT = 600
 # centre can never be closer than ROBOT_RADIUS to a wall or an obstacle.
 ROBOT_RADIUS = 20
 
+
 # Static obstacles as (x, y, width, height) with (x, y) the top-left corner.
 OBSTACLES = [
     (200, 150, 100, 50),
