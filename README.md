@@ -15,4 +15,9 @@ When working on an issue:
 
 Please ask questions or discuss the issue if you are unsure how to approach it. It's okay to ask for help!
 
+## Run Simulation
+
+`python -m simulation.main` 
+`python3 -m simulation.main` (Windows)
+
 ## Look at `docs/technicalPlan.md` for more details on the project
