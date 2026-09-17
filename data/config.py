@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-# config.py lives in read_arduino/, so the repo root is one level up.
+# config.py lives in arduino/, so the repo root is one level up.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Everything the pipeline writes goes here.

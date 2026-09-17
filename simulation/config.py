@@ -25,3 +25,8 @@ OBSTACLES = [
     (200, 150, 100, 50),
     (500, 300, 75, 150),
 ]
+
+#Plant is draw as a square
+PLANT_LENGTH = 10
+
+PLANT_INIT_POS = [(80,80), (740,540)]

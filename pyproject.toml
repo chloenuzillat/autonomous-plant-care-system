@@ -13,13 +13,13 @@ dependencies = [
 ]
 
 [tool.setuptools]
-# Explicit list rather than auto-discovery: the repo root also holds data/ and
-# docs/, which are not importable packages.
+# Explicit list rather than auto-discovery: the repo root also holds docs/,
+# which is not an importable package.
 packages = [
+    "data",
+    "data.environmental_sensors",
     "pi",
     "pi.robot",
     "read_arduino",
-    "read_arduino.data",
-    "read_arduino.data.environmental_sensors",
     "simulation",
 ]
