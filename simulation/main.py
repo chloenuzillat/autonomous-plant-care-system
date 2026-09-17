@@ -1,9 +1,84 @@
-from simulation.config import ROBOT_RADIUS
+from simulation.config import (ROBOT_RADIUS, PLANT_LENGTH, PLANT_INIT_POS, PLANT_SPECIES_ID,
+                               USER_PLANT_ID, MOCK_DB_PATH)
 from simulation.simulated_robot import SimulatedRobot
 from simulation.environment import Environment
 from simulation.obstacle import Obstacle
+from simulation.plant import Plant
+from data.environmental_sensors.store import (init_db, add_plant_info, add_user_plant_log,
+                                              read_user_plant_log)
+from pathlib import Path
 import pygame
 import math
+import csv
+
+MOCK_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "environmental_sensors" / "mock_data"
+MOCK_PLANT_INFO_CSV = MOCK_DATA_DIR / "mock_plant_info.csv"
+MOCK_USER_PLANT_LOG_CSV = MOCK_DATA_DIR / "mock_user_plant_log.csv"
+
+# add_plant_info stamps last_updated itself, and rejects outright any record
+# carrying a key it does not know, so the CSV's own column has to be dropped.
+IGNORED_COLUMNS = {"last_updated"}
+
+# These two columns are keys, not measurements; every other numeric column is a
+# reading and belongs in the database as a float.
+ID_COLUMNS = {"plant_id", "user_plant_id"}
+
+
+def load_mock_database(db_path=MOCK_DB_PATH):
+    """
+    Create the mock sensor database and fill it from the mock CSVs.
+
+    The simulation reads diagnostics straight out of a database, so it needs one
+    that exists and has readings in it. This is its own file under
+    simulation/mock_db, kept apart from the real database in data/, because
+    everything in it was generated rather than measured.
+
+    Safe to call on every run: species rows are upserted, and readings are only
+    inserted for plants that have none logged yet, so nothing is duplicated.
+
+    :param db_path: Where the mock database file lives
+    """
+    init_db(db_path)
+
+    # csv hands back strings for everything, so each field is converted to what
+    # its column expects; an empty field means the reading was never taken.
+    tables = {}
+    for csv_path in (MOCK_PLANT_INFO_CSV, MOCK_USER_PLANT_LOG_CSV):
+        rows = []
+        with open(csv_path, newline="", encoding="utf-8") as handle:
+            for raw_row in csv.DictReader(handle):
+                row = {}
+                for column, value in raw_row.items():
+                    if column in IGNORED_COLUMNS:
+                        continue
+
+                    value = (value or "").strip()
+                    if not value:
+                        row[column] = None
+                    elif column in ID_COLUMNS:
+                        row[column] = int(value)
+                    else:
+                        try:
+                            row[column] = float(value)
+                        except ValueError:
+                            row[column] = value
+                rows.append(row)
+        tables[csv_path] = rows
+
+    for species in tables[MOCK_PLANT_INFO_CSV]:
+        add_plant_info(db_path, species)
+
+    readings = tables[MOCK_USER_PLANT_LOG_CSV]
+
+    # Worked out up front, because the first insert would make every later row
+    # for that same plant look like it had already been loaded.
+    already_loaded = {reading["user_plant_id"] for reading in readings
+                      if read_user_plant_log(reading["user_plant_id"], db_path)}
+
+    for reading in readings:
+        if reading["user_plant_id"] not in already_loaded:
+            add_user_plant_log(db_path, reading)
+
 
 def draw_robot(screen, robot):
     """
@@ -24,6 +99,14 @@ def draw_robot(screen, robot):
 
     pygame.draw.line(screen, (118, 173, 100), (int(x), int(y)), (int(end_x), int(end_y)), 4)
 
+def draw_plant(screen, plant):
+    """
+    Draw the plant on the given Pygame screen. 
+    """
+    x, y = plant.get_position()
+
+    pygame.draw.rect(screen, (0, 255, 0), (x, y, plant.w, plant.h))
+    
 def draw_obstacle(screen, obstacle):
     """
     Draw the obstacle on the given Pygame screen.
@@ -34,13 +117,23 @@ def main():
     """
     Main function to run the simulation.
     """
+    # Diagnostics are read straight out of the sensor database, so it has to
+    # exist and hold readings before the loop runs.
+    load_mock_database()
+
     environment = Environment(800, 600)
 
     obstacle1 = Obstacle(200, 150, 100, 50)
     obstacle2 = Obstacle(500, 300, 75, 150)
 
+    plant1 = Plant(PLANT_SPECIES_ID[0], PLANT_INIT_POS[0][0], PLANT_INIT_POS[0][1], USER_PLANT_ID[0], PLANT_LENGTH, PLANT_LENGTH)
+    plant2 = Plant(PLANT_SPECIES_ID[1], PLANT_INIT_POS[1][0], PLANT_INIT_POS[1][1], USER_PLANT_ID[1], PLANT_LENGTH, PLANT_LENGTH)
+
     environment.add_obstacle(obstacle1)
     environment.add_obstacle(obstacle2)
+
+    environment.add_plant(plant1)
+    environment.add_plant(plant2)
 
     robot = SimulatedRobot(environment)
 
@@ -95,6 +188,8 @@ def main():
         for obstacle in environment.get_obstacles():
             draw_obstacle(screen, obstacle)
 
+        for plant in environment.get_plants():
+            draw_plant(screen, plant)
         draw_robot(screen, robot)
 
         pygame.display.flip()

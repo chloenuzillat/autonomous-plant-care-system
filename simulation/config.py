@@ -13,6 +13,15 @@ Importable from anywhere in the repo, not just the simulation package:
     from simulation.config import GRID_WIDTH, GRID_HEIGHT, ROBOT_RADIUS
 """
 
+from pathlib import Path
+
+# Sensor readings the simulation shows are generated, not measured, so they are
+# kept in their own database here rather than mixed into the real one in data/.
+MOCK_DB_DIR = Path(__file__).resolve().parent / "mock_db"
+MOCK_DB_PATH = MOCK_DB_DIR / "plant_robot.db"
+
+MOCK_DB_DIR.mkdir(parents=True, exist_ok=True)
+
 GRID_WIDTH = 800
 GRID_HEIGHT = 600
 
@@ -27,6 +36,12 @@ OBSTACLES = [
 ]
 
 #Plant is draw as a square
-PLANT_LENGTH = 10
+PLANT_LENGTH = 15
 
 PLANT_INIT_POS = [(80,80), (740,540)]
+
+# plant_info.plant_id of the species standing at each PLANT_INIT_POS, in the same
+# order: Snake Plant at (80, 80), Sweet Basil at (740, 540). Matches the two-plant
+# layout in data/environmental_sensors/mock_data/mock_user_plant_log.csv.
+PLANT_SPECIES_ID = [1, 7]
+USER_PLANT_ID = [1,2]
