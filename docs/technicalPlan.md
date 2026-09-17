@@ -42,7 +42,7 @@ The communication layer should remain modular so the underlying transport can be
 
 ### Embedded System
 
-#### Raspberry Pi
+#### Raspberry Pi 4 Model B
 
 - Computer vision
 - Navigation and mapping
