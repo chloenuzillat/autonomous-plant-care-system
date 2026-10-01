@@ -10,14 +10,11 @@ class Robot:
         :param left_speed: Speed of the left motor
         :param right_speed: Speed of the right motor
         """
-        # Code to set the motor speeds would go here
-        raise NotImplementedError("Motor control not implemented yet.")
 
     def stop(self):
         """
         Stop the robot by setting both motor speeds to zero.
         """
-        raise NotImplementedError("Motor control not implemented yet.")
 
     def get_position(self):
         """
@@ -25,7 +22,6 @@ class Robot:
 
         :return: A tuple (x, y) representing the robot's position
         """
-        raise NotImplementedError("Position tracking not implemented yet.")
 
     def get_orientation(self):
         """
@@ -33,4 +29,8 @@ class Robot:
 
         :return: The orientation angle in degrees
         """
-        raise NotImplementedError("Orientation tracking not implemented yet.")
+
+    def get_encoder_data(self):
+        """
+        Get the encoder data from the sensors.
+        """
