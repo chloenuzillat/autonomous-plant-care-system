@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pi.navigation import cell_size
 
 
-@dataclass
+@dataclass(frozen=True)
 class Position:
     x: int
     y: int
@@ -54,3 +54,17 @@ class Map:
     def add_target(self, position: Position):
         if self.is_within_bounds(position):
             self.target_positions.append(position)
+
+    def get_neighbors(self, position: Position) -> list[Position]:
+        candidates = [
+            Position(position.x + 1, position.y),
+            Position(position.x - 1, position.y),
+            Position(position.x, position.y + 1),
+            Position(position.x, position.y - 1),
+        ]
+
+        return [
+            neighbor
+            for neighbor in candidates
+            if self.is_traversable(neighbor)
+        ]
