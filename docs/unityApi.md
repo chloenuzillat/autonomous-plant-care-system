@@ -48,6 +48,7 @@ Other variables: `PLANT_API_HOST`, `PLANT_API_PORT`, `PLANT_API_RELOAD`,
 | POST | `/plants/{user_plant_id}/readings` | Log one reading; returns it as stored |
 | DELETE | `/plants/{user_plant_id}/readings` | Delete every reading for one plant; returns what it deleted |
 | GET | `/readings/near` | Readings near a point, nearest first (`pos_x`, `pos_y`, `radius`, `limit`) |
+| WS | `/ws` | Push channel: readings as they are logged |
 
 ### The two ids
 
@@ -87,6 +88,67 @@ PosY = floorHeight - robot.transform.position.z;
 
 The client does not flip it for you, because only your scene knows its extents.
 
+## The push channel
+
+`/ws` is the one endpoint that does not wait to be asked. Connect to
+`ws://127.0.0.1:8000/ws` and the server sends:
+
+- a **`hello`** frame immediately, naming the database it serves, so a client
+  can confirm it reached the right server;
+- a **`reading`** frame for every reading logged through
+  `POST /plants/{id}/readings`, carrying the row *as stored* — so the client
+  learns the `log_id` and the database's timestamp without asking;
+- a **`pong`** in reply to `{"type": "ping"}`, which is the only thing a client
+  needs to send. Everything else it sends is ignored: writes go over HTTP.
+
+Every frame is the same envelope, so one deserializer handles all of them:
+
+```json
+{ "type": "reading", "seq": 7, "sent_at": "2026-10-08 18:42:07",
+  "reading": { "log_id": 12, "user_plant_id": 1, "lux_reading": 1846.8, ... } }
+```
+
+`seq` increments by one per frame per connection; a gap means frames were
+dropped, which happens when a client stops reading. Ignore frame types you do
+not recognise rather than treating them as errors, so new ones can be added
+without breaking you.
+
+### Drive commands — reserved, not implemented
+
+There is a fourth frame type, `command`, that **nothing sends today**. Its shape
+is settled because the Unity client is already written against it:
+
+```json
+{ "type": "command", "seq": 9, "sent_at": "...",
+  "command": { "throttle": 0.4, "steer": -0.25, "handbrake": false } }
+```
+
+`throttle` and `steer` are both in `[-1, 1]`. See `DriveCommand` in
+`api/schemas.py`. Deliberately left blank on the Python side for now: deciding
+how the robot should move is not this API's job, and there is no controller to
+decide it yet.
+
+To turn it on, broadcast from wherever that decision ends up being made — the
+hub does not care who publishes:
+
+```python
+hub.publish("command", command=command.model_dump())
+```
+
+A command is a **state, not an impulse** — it stays in effect until the next one
+arrives. Whoever enables this should know the client stops its robot if commands
+go quiet, rather than holding the last throttle forever; on the Unity side that
+is `SocketCommandDriver`'s staleness timeout.
+
+### What the push does not see
+
+Broadcasts fire from the HTTP handler, so only writes that come **through this
+process** are visible. Python code calling `store.add_user_plant_log` directly
+bypasses the API and no frame is sent. There is no change notification in SQLite
+to fall back on — no triggers, no update hook — so if out-of-process writes ever
+become real, this needs a poller watching the high-water `log_id` rather than a
+tweak.
+
 ## Unity setup
 
 1. The Newtonsoft dependency is already in `Packages/manifest.json`
@@ -119,10 +181,16 @@ client.PostReading(1, new ReadingCreate {
 
 - **No authentication.** The server binds `127.0.0.1` and anyone who can reach
   it can read and delete every reading. Do not set `PLANT_API_HOST=0.0.0.0`
-  outside a network you trust.
+  outside a network you trust — and bear that in mind before enabling the
+  `command` frame, which would let the same anyone drive the robot.
 - **WebGL builds need CORS.** They run in a browser and are subject to it; the
   default `PLANT_API_CORS_ORIGINS=*` covers development. Native players are not
-  affected.
+  affected. Note CORS middleware does **not** apply to the WebSocket handshake,
+  so `/ws` accepts any origin regardless of that setting.
+- **WebGL cannot use the C# socket client.** `ClientWebSocket` needs
+  `System.Net` sockets, which a browser build does not have. A WebGL target
+  means swapping `PlantSocketClient` for a jslib-backed package such as
+  NativeWebSocket; nothing else about the contract changes.
 - **Android builds block cleartext HTTP** by default. Use HTTPS, or allow
   cleartext for your host, if the robot is ever driven from a phone.
 - **One writer at a time** is the comfortable assumption. SQLite serialises
@@ -131,12 +199,20 @@ client.PostReading(1, new ReadingCreate {
 
 ## Where this sits
 
-`api/` is a server, so it is deliberately *not* in
+`api/` is a server, and for the HTTP endpoints it is deliberately *not* in
 `pi/communication/unity_client.py` — that file is reserved for Pi-side code that
-calls **out** to Unity, the opposite direction.
+calls **out** to Unity.
+
+`/ws` bends that rule: a push means `api/` does initiate traffic toward Unity.
+It stays here anyway, because the connection is still opened *by* the client and
+the server only answers on a socket it was handed. `unity_client.py` remains the
+place for code that goes looking for Unity on its own.
 
 - `api/schemas.py` — request and response shapes. Request models forbid unknown
   fields on purpose; see the note at the top of the file.
+- `api/hub.py` — the WebSocket fan-out. Publishers are sync handlers on worker
+  threads, so they queue rather than send; one task drains the queue. The
+  reasoning is at the top of the file.
 - `api/store_gateway.py` — the only place that talks to `store.py`. It exists
   because the store's writers report failure by returning `None`, exactly as
   they do on success, so every write here is confirmed by reading back.

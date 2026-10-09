@@ -130,3 +130,46 @@ class Health(BaseModel):
 
     status: str
     db_path: str
+
+
+class DriveCommand(_Strict):
+    """
+    How a client should drive its robot, for one moment.
+
+    **Reserved, not implemented.** Nothing in this codebase sends one yet; this
+    is here so the wire shape is settled and the Unity client can be written
+    against it. To turn it on, broadcast from wherever the decision gets made::
+
+        hub.publish("command", command=command.model_dump())
+
+    A command is a *state*, not an impulse: it stays in effect until the next
+    one arrives. A client should therefore stop its robot if commands go quiet
+    rather than holding the last throttle forever.
+    """
+
+    throttle: float = Field(..., ge=-1, le=1, description="-1 full reverse, 1 full forward")
+    steer: float = Field(..., ge=-1, le=1, description="-1 full left, 1 full right")
+    handbrake: bool = Field(False, description="Lock the wheels, ignoring throttle")
+
+
+class SocketEnvelope(BaseModel):
+    """
+    One frame on ``/ws``.
+
+    Documentation and a schema for clients rather than a model the server
+    validates against -- frames are built as plain dicts in ``hub.py`` so a
+    broadcast cannot fail on serialization while holding the event loop.
+
+    ``type`` says which payload field to read: ``hello`` carries ``db_path``,
+    ``reading`` carries ``reading``, and ``pong`` carries nothing. ``command``
+    is reserved and never sent today -- see :class:`DriveCommand`. Unknown types
+    should be ignored, not treated as errors, so that new ones can be added
+    without breaking existing clients.
+    """
+
+    type: str = Field(..., description="'hello', 'reading' or 'pong'")
+    seq: int = Field(..., description="Increments by one per frame; gaps mean dropped frames")
+    sent_at: str = Field(..., description="Server clock, 'YYYY-MM-DD HH:MM:SS'")
+    reading: Optional[Reading] = None
+    command: Optional[DriveCommand] = Field(None, description="Reserved; not sent yet")
+    db_path: Optional[str] = Field(None, description="Present on 'hello', as in /health")

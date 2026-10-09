@@ -6,9 +6,10 @@ real one in data/.
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from api.app import create_app
-from api.schemas import ReadingCreate
+from api.schemas import DriveCommand, ReadingCreate, SocketEnvelope
 from data.environmental_sensors import store
 
 SNAKE_PLANT = {
@@ -204,6 +205,113 @@ def test_delete_returns_what_it_removed(client):
     assert client.get("/plants/1/readings").json()["count"] == 0
     # Deleting a plant with nothing logged is not an error.
     assert client.delete("/plants/1/readings").json()["count"] == 0
+
+
+def test_socket_introduces_itself_on_connect(client, tmp_path):
+    """
+    The first frame names the database, so a client can tell it reached the
+    server it meant to before it starts trusting anything else.
+    """
+    with client.websocket_connect("/ws") as socket:
+        hello = socket.receive_json()
+
+    assert hello["type"] == "hello"
+    assert hello["db_path"] == str(tmp_path / "test.db")
+    assert hello["seq"] == 1
+
+
+def test_posted_reading_is_pushed_to_the_socket(client):
+    with client.websocket_connect("/ws") as socket:
+        socket.receive_json()  # hello
+
+        posted = client.post("/plants/1/readings", json=READING).json()
+        frame = socket.receive_json()
+
+    assert frame["type"] == "reading"
+    # The row as stored, not the body as sent: the client learns the log_id and
+    # the timestamp the database stamped without having to ask for them.
+    assert frame["reading"]["log_id"] == posted["log_id"]
+    assert frame["reading"]["time_stamp"] == posted["time_stamp"]
+    assert frame["reading"]["user_plant_id"] == 1
+
+
+def test_every_client_gets_every_frame(client):
+    """Broadcast, not round-robin: two listeners both see the one reading."""
+    with client.websocket_connect("/ws") as first, client.websocket_connect("/ws") as second:
+        first.receive_json()
+        second.receive_json()
+
+        client.post("/plants/1/readings", json=READING)
+
+        assert first.receive_json()["type"] == "reading"
+        assert second.receive_json()["type"] == "reading"
+
+
+def test_sequence_numbers_increase_so_gaps_are_visible(client):
+    with client.websocket_connect("/ws") as socket:
+        socket.receive_json()  # hello is seq 1
+
+        client.post("/plants/1/readings", json=READING)
+        client.post("/plants/1/readings", json=READING)
+
+        seqs = [socket.receive_json()["seq"], socket.receive_json()["seq"]]
+
+    assert seqs == [2, 3]
+
+
+def test_ping_is_answered(client):
+    """
+    So a client can prove the connection is alive during a long quiet spell
+    instead of waiting for a reading that may be minutes away.
+    """
+    with client.websocket_connect("/ws") as socket:
+        socket.receive_json()  # hello
+        socket.send_json({"type": "ping"})
+
+        assert socket.receive_json()["type"] == "pong"
+
+
+def test_writes_succeed_with_nothing_listening(client):
+    """
+    The push is a side effect, never a precondition. A reading posted with no
+    socket open must store and return exactly as it always did.
+    """
+    response = client.post("/plants/1/readings", json=READING)
+
+    assert response.status_code == 201
+    assert response.json()["log_id"] == 1
+
+
+def test_socket_frames_match_the_published_envelope(client):
+    """
+    SocketEnvelope documents the frame shape for clients, but the hub builds
+    frames as plain dicts, so nothing stops the two drifting apart. Validate
+    one of each kind actually sent against it.
+    """
+    with client.websocket_connect("/ws") as socket:
+        hello = socket.receive_json()
+        socket.send_json({"type": "ping"})
+        pong = socket.receive_json()
+        client.post("/plants/1/readings", json=READING)
+        reading = socket.receive_json()
+
+    for frame in (hello, pong, reading):
+        SocketEnvelope.model_validate(frame)
+
+
+def test_drive_command_shape_is_settled_even_though_nothing_sends_one(client):
+    """
+    DriveCommand is reserved for a controller that does not exist yet, but the
+    Unity client is written against it, so its field names and the -1..1 bounds
+    are a contract already. Nothing should send one today.
+    """
+    assert set(DriveCommand.model_fields) == {"throttle", "steer", "handbrake"}
+
+    with pytest.raises(ValidationError):
+        DriveCommand(throttle=2.0, steer=0.0)
+
+    # No route accepts or produces one.
+    assert client.post("/commands", json={"throttle": 0.0, "steer": 0.0}).status_code == 404
 
 
 def test_reading_fields_match_the_store():

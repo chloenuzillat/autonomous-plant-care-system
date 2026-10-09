@@ -7,15 +7,27 @@ safe here because the store opens a fresh sqlite3 connection inside each call
 and closes it before returning, so no connection is ever shared across threads.
 """
 
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Path as PathParam, Query, Request, status
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Path as PathParam,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from api import config
+from api.hub import Hub
 from api.schemas import (
     Health,
     Reading,
@@ -26,13 +38,21 @@ from api.schemas import (
 )
 from api.store_gateway import StoreRejected, build_gateway
 
+logger = logging.getLogger(__name__)
+
 DESCRIPTION = """
 Read/write access to the plant care system's data for clients outside Python --
 a Unity project in particular.
 
-This API is **data-only**. It serves species care ranges and logged sensor
-readings, and accepts readings back. It does not control the robot and does not
-run a simulation: the client owns its own world.
+It serves species care ranges and logged sensor readings, and accepts readings
+back. It does not run a simulation: the client owns its own world.
+
+It does not control the robot: the client owns its own behaviour.
+
+Most of this is request/response. The exception is `/ws`, a WebSocket that
+pushes rather than answers: every reading logged through `POST
+/plants/{id}/readings` is broadcast to connected clients as it is stored.
+Clients that only want to ask questions can ignore it entirely.
 
 Three things to know before writing a client:
 
@@ -61,13 +81,31 @@ def create_app(db_path: Optional[Path] = None) -> FastAPI:
         pass a temporary file.
     """
     gateway = build_gateway(db_path)
+    hub = Hub()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         # Idempotent, and it also runs the store's column migrations, so an
         # older database file is brought up to date before the first request.
         gateway.init()
-        yield
+
+        # The hub can only reach the loop once there is one, so it is bound
+        # here rather than at construction. Until this runs, publishing is a
+        # no-op, which is what lets a handler be called without a server.
+        hub.attach(asyncio.get_running_loop())
+        pump = asyncio.create_task(hub.drain(), name="websocket-drain")
+
+        try:
+            yield
+        finally:
+            pump.cancel()
+            # Await the cancellation so shutdown does not race the task, and
+            # swallow it because cancelling is how this task is meant to end.
+            try:
+                await pump
+            except asyncio.CancelledError:
+                pass
+            hub.detach()
 
     app = FastAPI(
         title="Autonomous Plant Care System API",
@@ -77,6 +115,7 @@ def create_app(db_path: Optional[Path] = None) -> FastAPI:
     )
 
     app.state.gateway = gateway
+    app.state.hub = hub
 
     # Only Unity WebGL builds are subject to CORS; native players are not.
     app.add_middleware(
@@ -181,6 +220,12 @@ def create_app(db_path: Optional[Path] = None) -> FastAPI:
         """
         row = gateway.add_reading(user_plant_id, reading.model_dump())
 
+        # Tell the listeners. This only queues, so a slow or dead client cannot
+        # delay this response, and a write still succeeds when nobody is
+        # connected. Note it fires only for writes that come through this
+        # process: Python code calling the store directly is invisible here.
+        hub.publish("reading", reading=row)
+
         return Reading(**row)
 
     @app.delete(
@@ -213,6 +258,43 @@ def create_app(db_path: Optional[Path] = None) -> FastAPI:
         rows = gateway.read_readings_near(pos_x, pos_y, radius, limit)
 
         return _reading_list(rows)
+
+    @app.websocket("/ws")
+    async def socket(client: WebSocket) -> None:
+        """
+        Push readings and drive commands as they happen.
+
+        Receive-only from the client's point of view, apart from `{"type":
+        "ping"}`, which is answered with a `pong` so a client can prove the
+        connection is alive without waiting for a reading.
+
+        Reading from the socket is also how a disconnect is noticed: without a
+        pending receive, a client that goes away is not detected until the next
+        broadcast fails.
+        """
+        await hub.connect(client)
+
+        try:
+            # Say who we are first, so a client can confirm it reached the
+            # server it meant to, and which database that server is serving.
+            await hub.send_to(client, "hello", db_path=str(gateway.db_path))
+
+            while True:
+                message = await client.receive_json()
+                if isinstance(message, dict) and message.get("type") == "ping":
+                    await hub.send_to(client, "pong")
+                # Anything else is ignored on purpose: this socket is a push
+                # channel, and the HTTP endpoints are how a client writes.
+        except WebSocketDisconnect:
+            # The ordinary ending. Not worth a warning.
+            pass
+        except Exception as exc:  # noqa: BLE001
+            # Includes a client sending something that is not JSON. There is no
+            # exception handler for WebSocket routes and no status code to
+            # return, so log it and drop the connection.
+            logger.info("websocket closed after error: %s", exc)
+        finally:
+            hub.disconnect(client)
 
     return app
 
