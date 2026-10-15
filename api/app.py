@@ -9,6 +9,7 @@ and closes it before returning, so no connection is ever shared across threads.
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+from threading import Lock
 from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Path as PathParam, Query, Request, status
@@ -24,6 +25,7 @@ from api.schemas import (
     SpeciesInfo,
     SpeciesUpsert,
 )
+from api.robot_commands import router as robot_router
 from api.store_gateway import StoreRejected, build_gateway
 
 DESCRIPTION = """
@@ -77,6 +79,15 @@ def create_app(db_path: Optional[Path] = None) -> FastAPI:
     )
 
     app.state.gateway = gateway
+
+    app.state.robot_command = {
+        "left_speed": 0.0,
+        "right_speed": 0.0,
+        "command_id": 0,
+    }
+    app.state.robot_command_lock = Lock()
+
+    app.include_router(robot_router)
 
     # Only Unity WebGL builds are subject to CORS; native players are not.
     app.add_middleware(
