@@ -11,7 +11,6 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from threading import Lock
 from typing import List, Optional
 
 from fastapi import (
@@ -118,13 +117,6 @@ def create_app(db_path: Optional[Path] = None) -> FastAPI:
 
     app.state.gateway = gateway
     app.state.hub = hub
-
-    app.state.robot_command = {
-        "left_speed": 0.0,
-        "right_speed": 0.0,
-        "command_id": 0,
-    }
-    app.state.robot_command_lock = Lock()
 
     app.include_router(robot_router)
 
