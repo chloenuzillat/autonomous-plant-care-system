@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from pi.navigation import cell_size
-
 
 @dataclass(frozen=True)
 class Position:
@@ -9,19 +7,25 @@ class Position:
     y: int
 
 class Map:
-    """
-    Represents the navigable area used by the robot's path planner.
-    """
+    """Represents the navigable area used by the robot's path planner."""
 
-    def __init__(self, width: int, height: int):
+    def __init__(
+            self,
+            width: int,
+            height: int,
+            cell_size: float,
+            origin_x: float = 0.0,
+            origin_y: float = 0.0
+    ):
         self.width = width
         self.height = height
         self.cell_size = cell_size
+        self.origin_x = origin_x
+        self.origin_y = origin_y
 
         self.robot_position = None
         self.target_positions = []
 
-        # True = traversable, False = blocked
         self.grid = [
             [True for _ in range(width)]
             for _ in range(height)
@@ -68,3 +72,15 @@ class Map:
             for neighbor in candidates
             if self.is_traversable(neighbor)
         ]
+
+    def cell_to_world(self, position: Position) -> tuple[float, float]:
+        return (
+            self.origin_x + (position.x + 0.5) * self.cell_size,
+            self.origin_y + (position.y + 0.5) * self.cell_size
+        )
+
+    def world_to_cell(self, x: float, y: float) -> Position:
+        return Position(
+            int((x - self.origin_x) // self.cell_size),
+            int((y - self.origin_y) // self.cell_size)
+        )
